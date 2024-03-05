@@ -1,0 +1,421 @@
+---
+title: "グループD発表"
+author: "生井沢祥吾"
+date: "2023-08-15"
+output: html_document
+---
+
+## データの読み込み
+```{r}
+library(readr)
+zemi_groupD <- read_csv("../data/zemi_groupD.csv")
+View(zemi_groupD)
+```
+
+## 分析に必要なライブラリの読み込み
+```{r}
+library(ggplotgui)#ggplot_shiny(exdataset)をコンソールに打ち込んで実行する
+library(forcats)
+library(GGally)
+library(dplyr)
+library(ggeffects)
+library(tidyverse)
+library(sjPlot)
+```
+
+### データに主観的幸福度(SUB_HAP1 ~ SUB_HAP4)の合計値`SUB_HAP_SUM`列を追加する
+```{r}
+zemi_groupD <- mutate(zemi_groupD, 
+                        SUB_HAP_SUM = SUB_HAP1 + SUB_HAP2 
+                        + SUB_HAP3 + SUB_HAP4)
+zemi_groupD
+```
+
+
+```{r}
+zemi_groupD <- mutate(zemi_groupD, 
+                        SUB_HAP = SUB_HAP_SUM / 4)
+zemi_groupD
+```
+
+
+--- 
+
+# **1.年代別の幸福度の違い**
+
+## 対立仮説1(主張したいこと)
+#### 年代によって主観的幸福度は異なる。
+
+## 帰無仮説1
+#### 年代によって主観的幸福度は異なるというわけではない。
+
+
+## 分析方法
+#### 年代`GEN`を説明変数,主観的幸福度`SUB_HAP1`~`SUB_HAP4`の合計値`SUB_HAP_SUM`を応答変数として**一要因分散分析**を行いました。
+- データ解析論Ⅱ第3講を参考に分析しました。
+
+
+
+### 欠損値の削除
+```{r}
+zemi_groupD_1 <- subset(zemi_groupD, !(is.na(zemi_groupD$GEN)))
+View(zemi_groupD_1)
+#525行から年代「回答しない」の5行を削除
+```
+### グラフ化
+```{r}
+# You need the following package(s):
+library("ggplot2")
+
+# The code below will generate the graph:
+graph <- ggplot(zemi_groupD_1, aes(x = GEN, y = SUB_HAP)) +
+  geom_point(stat = 'summary', fun.y = 'mean') +
+  geom_errorbar(stat = 'summary', fun.data = 'mean_se', 
+                width=0, fun.args = list(mult = 1.96)) +
+  theme_bw()
+graph
+```
+
+### 分析モデル
+- 各年代ごとに主観的幸福度の違いがあるか示しています。
+
+```{r}
+hapgen_model <- lm(SUB_HAP ~ GEN, zemi_groupD_1) # lm(応答変数~説明変数, data = 対象のデータ)
+
+summary(hapgen_model)
+#以下の結果から20代の主観的幸福度は高く、20代と比較して主観的幸福度が30代は3.3239、40代は2.8970 低いことが5％水準で統計的有意である。
+#40代以降の主観的幸福度に関しては統計的有意差は認められなかった。
+
+```
+
+### 分散分析表の算出
+- 年代という要因によって主観的幸福度の分散が異なることを示す。
+```{r}
+anova(hapgen_model)
+# 主観的幸福は年代によって異なるかを分析した．その結果，F(5, 514)=6.2278 (p< .001)であり，5%水準で有意にあることが示されている．したがって，主観的幸福度は居住地域によって異なる傾向にあることが示されている．
+```
+
+### 分析結果の表
+```{r}
+library(sjPlot)
+tab_model(hapgen_model)
+```
+
+### 分析結果
+#### 20代の主観的幸福度は高く、20代と比較して主観的幸福度が30代は3.3239、40代は2.8970 低いことが5％水準で統計的有意である。
+#### 40代以降の主観的幸福度に関しては統計的有意差は認められなかった。
+#### 主観的幸福は年代によって異なるかを分析した．その結果，F(5, 514)=6.2278 (p< .001)であり，5%水準で有意にあることが示された．したがって，**主観的幸福度は居住地域によって異なる傾向にあることが示された．**
+
+--- 
+
+# **2.年収別の幸福度の違い**
+
+## 対立仮説2(主張したいこと)
+#### 年収によって主観的幸福度は異なる。
+
+## 帰無仮説2
+#### 年収によって主観的幸福度は異なるというわけではない。
+
+
+## 分析方法
+#### 年収`ANNUAL_INCOME`を説明変数,主観的幸福度`SUB_HAP1`~`SUB_HAP4`の合計値`SUB_HAP_SUM`を応答変数として**一要因分散分析**を行いました。
+- データ解析論Ⅰ第9講～第13講を参考にしました。
+
+### 欠損値の削除
+```{r}
+zemi_groupD_2 <- subset(zemi_groupD, !(is.na(zemi_groupD$ANNUAL_INCOME)))
+View(zemi_groupD_2)
+#525行から年収「回答しない」の88行を削除
+```
+
+
+### グラフ化
+```{r}
+# You need the following package(s):
+library("ggplot2")
+
+# The code below will generate the graph:
+graph <- ggplot(zemi_groupD_2, aes(x = ANNUAL_INCOME, y = SUB_HAP)) +
+  geom_point(stat = 'summary', fun.y = 'mean') +
+  geom_errorbar(stat = 'summary', fun.data = 'mean_se', 
+                width=0, fun.args = list(mult = 1.96)) +
+  theme_bw()
+graph
+```
+
+### 分析モデル
+```{r}
+hapinc_model <- lm(SUB_HAP ~ ANNUAL_INCOME, zemi_groupD_2) 
+
+summary(hapinc_model)
+```
+
+### 分散分析表の算出
+- 年収という要因によって主観的幸福度の分散が異なることを示す。
+```{r}
+anova(hapinc_model)
+```
+
+
+### 分析結果の表
+```{r}
+library(sjPlot)
+tab_model(hapinc_model)
+```
+
+
+#### 主観的幸福は年収によって異なるかを分析した．その結果，F(1, 435)=10.594(p< .005)であり，5%水準で有意にあることが示された．したがって，**主観的幸福度は年収によって異なる傾向にあることが示された．**
+
+
+
+--- 
+
+# **3.喫煙による幸福度の違い**
+## 対立仮説3(主張したいこと)
+#### 喫煙の有無によって主観的幸福度が異なる。
+
+## 帰無仮説3
+#### 喫煙の有無によって主観的幸福度が異なるというわけではない。
+
+
+## 分析方法
+#### 喫煙`SMOKE`をしているか否かを説明変数,主観的幸福度`SUB_HAP1`~`SUB_HAP4`の合計値`SUB_HAP_SUM`を応答変数として**ダミー回帰分析を行いました。**
+- データ解析論Ⅰ第9講～第13講を参考にしました。
+
+
+### 欠損値の削除
+```{r}
+zemi_groupD <- subset(zemi_groupD, !(is.na(zemi_groupD$SMOKE)))
+```
+
+
+### グラフ化
+```{r}
+# You need the following package(s):
+library("ggplot2")
+
+# The code below will generate the graph:
+graph <- ggplot(zemi_groupD, aes(x = SMOKE, y = SUB_HAP)) +
+  geom_point(stat = 'summary', fun.y = 'mean') +
+  geom_errorbar(stat = 'summary', fun.data = 'mean_se', 
+                width=0, fun.args = list(mult = 1.96)) +
+  theme_bw()
+graph
+```
+
+### 分析結果の出力(ダミー回帰分析)
+```{r}
+smohap_model <- lm(SUB_HAP ~ SMOKE, data = zemi_groupD)# lm(応答変数~説明変数, data = 対象のデータ)
+summary(smohap_model)
+#非喫煙者の主観的幸福度の平均値の予測は15.4652、喫煙者はこの値より1.5775マイナスの数値である。P値による妥当性の判定を５％水準にする場合、P=0.00468であるため対立仮説を採択する。
+```
+
+### 分析結果の表
+```{r}
+library(sjPlot)
+tab_model(smohap_model)
+```
+
+## 分析結果
+#### ダミー回帰分析モデルによって**非喫煙者に比べて，喫煙者の方が主観的幸福度が1.6838低いことが示された。**(t(515) = -2.841, p<.005)
+
+
+
+--- 
+
+# **４.飲酒による幸福度の違い**
+
+## 対立仮説4(主張したいこと)
+#### 飲酒の有無によって主観的幸福度が異なる。
+
+## 帰無仮説4
+#### 飲酒の有無によって主観的幸福度が異なるというわけではない。
+
+
+## 分析方法
+#### 飲酒`ALCOHOL`をしているか否かを説明変数,主観的幸福度`SUB_HAP1`~`SUB_HAP4`の合計値`SUB_HAP_SUM`を応答変数として**ダミー回帰分析を行いました。**
+- データ解析論Ⅰ第9講～第13講を参考にしました。
+- ALCOHOL列に欠損値なし
+
+### グラフ化
+```{r}
+# You need the following package(s):
+library("ggplot2")
+
+# The code below will generate the graph:
+graph <- ggplot(zemi_groupD, aes(x = ALCOHOL, y = SUB_HAP)) +
+  geom_point(stat = 'summary', fun.y = 'mean') +
+  geom_errorbar(stat = 'summary', fun.data = 'mean_se', 
+                width=0, fun.args = list(mult = 1.96)) +
+  theme_bw()
+graph
+```
+
+### 分析結果の出力(ダミー回帰分析)
+```{r}
+alchap_model <- lm(SUB_HAP ~ ALCOHOL, data = zemi_groupD)# lm(応答変数~説明変数, data = 対象のデータ)
+summary(alchap_model)
+#非喫煙者の主観的幸福度の平均値の予測は15.4652、喫煙者はこの値より1.5775マイナスの数値である。P値による妥当性の判定を５％水準にする場合、P=0.00468であるため対立仮説を採択する。
+```
+
+### 分析結果の表
+```{r}
+library(sjPlot)
+tab_model(alchap_model)
+```
+
+## 分析結果
+#### ダミー回帰分析モデルによって非飲酒者に比べて，飲酒者の方が主観的幸福度が0.7665高いことが示されたが、P値による妥当性の判定を５％水準にする場合、(t(523) = -1.741, p=0.0822 )なので帰無仮説を棄却することはできなかった。**つまり、飲酒の有無によって主観的幸福度が異なるとは言えない。**
+
+
+--- 
+
+# **5.睡眠満足度による幸福度の違い**
+
+## 対立仮説4(主張したいこと)
+#### 睡眠満足度が変化するにつれて，主観的幸福度も変化する．
+
+## 帰無仮説4
+#### 睡眠満足度が変化するにつれて，主観的幸福度も変化する．というわけではない。
+
+
+## 分析方法
+#### `SUB_HAP`を応答変数として**回帰分析を行いました。**
+- データ解析論Ⅰ第9講～第13講を参考にしました。
+- 
+
+### グラフ化
+```{r}
+# You need the following package(s):
+library("ggplot2")
+
+# The code below will generate the graph:
+graph<-ggplot(zemi_groupD) +
+  aes(x = SLP_SAT, y = SUB_HAP) +
+  geom_point(size = 1L, colour = "#0c4c8a") +
+  geom_smooth(span = 1L) + theme_minimal()
+
+graph
+```
+
+### 分析結果の出力(単回帰分析)
+```{r}
+alchap_model <- lm(SUB_HAP ~ SLP_SAT, data = zemi_groupD)# lm(応答変数~説明変数, data = 対象のデータ)
+summary(alchap_model)
+#非喫煙者の主観的幸福度の平均値の予測は15.4652、喫煙者はこの値より1.5775マイナスの数値である。P値による妥当性の判定を５％水準にする場合、P=0.00468であるため対立仮説を採択する。
+```
+
+### 分析結果の表
+```{r}
+library(sjPlot)
+tab_model(alchap_model)
+```
+
+## 分析結果
+#### 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

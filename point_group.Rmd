@@ -1,0 +1,293 @@
+---
+title: "point_group"
+author: "生井沢祥吾"
+date: "2024-02-12"
+output: html_document
+---
+
+
+### データの読み込み
+```{r}
+library(readr)
+point_abcd <- read_csv("../data/point_abcd.csv")
+point_a <- read_csv("../data/point_A.csv")
+point_b <- read_csv("../data/point_B.csv")
+point_c <- read_csv("../data/point_C.csv")
+point_d <- read_csv("../data/point_D.csv")
+#View(point_abcd)
+```
+
+--- 
+
+## 分析に必要なライブラリの読み込み
+```{r}
+library(ggplotgui)#ggplot_shiny(exdataset)をコンソールに打ち込んで実行する
+library(forcats)
+library(GGally)
+library(dplyr)
+library(ggeffects)
+library(tidyverse)
+library(sjPlot)
+```
+
+
+
+
+
+---
+
+# **仮説１：女性の方が男性よりポイントへの意識が強い。**
+
+## 対立仮説(主張したいこと)
+#### 女性の方が男性よりポイントへの意識が強い。
+
+## 帰無仮説
+#### 女性の方が男性よりポイントへの意識が強いというわけではない。
+
+
+## 分析方法
+#### 性別`Sex`を説明変数,消費者ポイント層`PointTypes`を応答変数として**ダミー回帰分析**を行いました。
+- データ解析論Ⅰ第12講を参考に分析
+
+## 欠損値の削除
+```{r}
+point_abcd_1 <- subset(point_abcd, Sex!=9)
+```
+
+## グラフの作成
+```{r}
+# The code below will generate the graph:
+graph <- ggplot(point_abcd_1, aes(x = Sex, y = PointType)) +
+  geom_point(stat = 'summary', fun.y = 'mean') +
+  geom_errorbar(stat = 'summary', fun.data = 'mean_se', 
+                width=0, fun.args = list(mult = 1.96)) +
+  theme_bw()
+graph
+
+```
+
+## 分析結果の出力(ダミー回帰分析)
+```{r}
+marhap_model <- lm(PointType ~ Sex, data = point_abcd_1)# lm(応答変数~説明変数, data = 対象のデータ)
+summary(marhap_model)
+```
+
+### 分析結果の表
+```{r}
+library(sjPlot)
+tab_model(marhap_model)
+```
+
+## 分析結果
+#### ダミー回帰分析モデルによって女性にに比べて，男性の方がポイント感度が0.005高いことが示されたが、P値による妥当性の判定を５％水準にする場合、(t(830) = -0.121, p=0.9036)なので帰無仮説を棄却することはできなかった。**つまり、女性のほうが男性よりポイント感度が高いとは言えない。**
+
+---
+
+# **仮説２：居住地域によってポイント感度が異なる。（関東、中部、近畿、その他）**
+
+## 対立仮説(主張したいこと)
+#### 居住地域によってポイント感度が異なる。
+
+## 帰無仮説
+#### 居住地域によってポイント感度が異なるというわけではない。
+
+
+## 分析方法
+#### 居住地域`Region`を説明変数,消費者ポイント層`PointTypes`を応答変数として**ダミー回帰分析**を行いました。
+- データ解析論Ⅱ第２講を参考に分析
+
+## 欠損値の削除
+```{r}
+point_abcd_1 <- subset(point_abcd, Region!=9)
+```
+
+## グラフの作成
+```{r}
+graph <- ggplot(point_abcd_1, aes(x = Region, y = PointType, colour = Region)) +
+  geom_point(stat = 'summary', fun.y = 'mean') +
+  geom_errorbar(stat = 'summary', fun.data = 'mean_se', 
+                width=0, fun.args = list(mult = 1.96)) +
+  theme_bw()
+graph
+```
+
+## 分析結果の出力(ダミー回帰分析)
+```{r}
+pointreg_model <- lm(PointType ~ Region, data = point_abcd_1)# lm(応答変数~説明変数, data = 対象のデータ)
+pointreg_model
+```
+
+```{r}
+summary(pointreg_model)
+```
+
+### 分析結果の表
+```{r}
+library(sjPlot)
+tab_model(pointreg_model)
+```
+
+```{r}
+anova(pointreg_model)
+```
+
+```{r}
+library(pander)
+pander(pointreg_model)
+```
+
+
+## 分析結果
+#### １要因分散分析で居住地域によってポイント感度が異なるか調べた。P値による妥当性の判定を５％水準にする場合、(t(830) = -0.121, p=0.9036)なので帰無仮説を棄却することはできなかった。**つまり、女性のほうが男性よりポイント感度が高いとは言えない。**
+
+---
+
+# **仮説3：ポイント１０倍と購入時に５％分ポイント付与。**
+
+## 対立仮説(主張したいこと)
+#### 「ポイント〇〇倍」の表現のほうが「〇〇％分ポイント付与」のほうが購買意欲が高くなる。
+
+## 帰無仮説
+#### 「ポイント〇〇倍」の表現のほうが「〇〇％分ポイント付与」のほうが購買意欲が高くなるというわけではない。
+
+
+## 分析方法
+#### 消費者ポイント層`PointTypes`ごとに「ポイント〇〇倍」と「〇〇％分ポイント付与」のサンプル群に対してt検定を行いました。
+- データ解析論Ⅰ第12講を参考に分析
+
+## 列の追加
+```{r}
+point_a %>%
+  mutate(MEAN_PointInt_A = mean(PointInt_A))
+
+point_c %>%
+  mutate(MEAN_PointInt_C = mean(PointInt_C))
+
+point_b %>%
+  mutate(MEAN_PointInt_B = mean(PointInt_B))
+
+point_d %>%
+  mutate(MEAN_PointInt_D = mean(PointInt_D))
+```
+
+
+
+
+
+
+### 各サンプル群の平均値(200)
+```{r}
+mean_int200 <- matrix(c(mean(point_b$PointInt_B), mean(point_c$PointInt_C)),
+                         nrow = 1, byrow = T)
+mean_int200
+```
+### でーたふれーむ化
+```{r}
+df_200 <- as.data.frame(mean_int200)
+colnames(df_200) <- c("10倍","５％分")
+rownames(df_200) <- c("mean")
+pander(df_200)
+```
+## t検定
+```{r}
+vx=c(point_b$PointInt_B)
+vy=c(point_c$PointInt_C)
+
+var.test(x=vx,y=vy)
+```
+
+```{r}
+bc_model<- t.test(x=vx,y=vy,var.equal=F,paired=F)
+bc_model
+```
+
+```{r}
+pander(bc_model)
+```
+
+
+
+### 各サンプル群の平均値(100)
+```{r}
+mean_int100 <- matrix(c(mean(point_a$PointInt_A), mean(point_d$PointInt_D)),
+                         nrow = 1, byrow = T)
+mean_int100
+```
+### でーたふれーむ化
+```{r}
+df_100 <- as.data.frame(mean_int100)
+colnames(df_100) <- c("5倍","５％分")
+rownames(df_100) <- c("mean")
+pander(df_100)
+```
+
+### t検定
+```{r}
+vx=c(point_a$PointInt_A)
+vy=c(point_d$PointInt_D)
+
+ad_model<- t.test(x=vx,y=vy,var.equal=F,paired=F)
+ad_model
+```
+### ニットでわかりやすく
+```{r}
+pander(ad_model)
+```
+
+
+
+
+
+
+
+
+
+### 各サンプル群の平均値（〇〇倍）
+```{r}
+mean_int5per <- matrix(c(mean(point_d$PointInt_D), mean(point_c$PointInt_C)),
+                         nrow = 1, byrow = T)
+mean_int5per
+```
+```{r}
+df_5per <- as.data.frame(mean_int5per)
+colnames(df_5per) <- c("100円で1P","200円で1P")
+rownames(df_5per) <- c("mean")
+pander(df_5per)
+```
+
+
+## t検定
+```{r}
+vx=c(point_d$PointInt_D)
+vy=c(point_c$PointInt_C)
+
+var.test(x=vx,y=vy)
+```
+
+```{r}
+dc_model<- t.test(x=vx,y=vy,var.equal=F,paired=F)
+```
+
+### ニットでわかりやすく
+```{r}
+pander(dc_model)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
